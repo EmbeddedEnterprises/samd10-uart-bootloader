@@ -24,7 +24,6 @@ HAL_GPIO_PIN(TX,              A, 25);
 #define PAGES_IN_ERASE_BLOCK  4
 #define ERASE_BLOCK_SIZE      (FLASH_PAGE_SIZE * PAGES_IN_ERASE_BLOCK)
 #define DATA_SIZE             64
-#define DATA_SIZE_WORDS       (int)(DATA_SIZE / sizeof(uint32_t))
 #define BL_REQUEST            0xDEADBEEF
 
 enum
@@ -51,7 +50,7 @@ static uint32_t *ram = (uint32_t *)HMCRAMC0_ADDR;
 static uint8_t bl_status = BL_STATUS_READY;
 
 
-static uint8_t flash_buffer[DATA_SIZE_WORDS * 4];
+static uint8_t flash_buffer[DATA_SIZE];
 static uint32_t flash_addr = 0;
 static uint32_t flash_crc = 0;
 static uint8_t flash_offset = 0;
@@ -118,7 +117,7 @@ static void uart_task(void)
     if (bl_status == BL_STATUS_ADDR) {
       flash_addr |= (data << flash_offset);
       flash_offset += 8;
-      if (flash_offset == 24) {
+      if (flash_offset == 32) {
         bl_status = BL_STATUS_DATA;
         flash_offset = 0;
         uart_putc(BL_CMD_ACK);
@@ -126,8 +125,9 @@ static void uart_task(void)
       continue;
     }
     if (bl_status == BL_STATUS_DATA) {
-      flash_buffer[flash_offset++] = data;
-      if (flash_offset == (DATA_SIZE_WORDS * 4) - 1) {
+      flash_buffer[flash_offset] = data;
+      flash_offset++;
+      if (flash_offset == DATA_SIZE) {
         bl_status = BL_STATUS_CRC;
         flash_offset = 0;
         flash_crc = 0;
@@ -138,7 +138,7 @@ static void uart_task(void)
     if (bl_status == BL_STATUS_CRC) {
       flash_crc |= (data << flash_offset);
       flash_offset += 8;
-      if (flash_offset == 24) {
+      if (flash_offset == 32) {
         bl_status = BL_STATUS_CRC_OK;
         uart_putc(BL_CMD_FLASH);
       }
@@ -154,6 +154,7 @@ static void flash_task(void)
     return;
   }
 
+  uint32_t *ram_buf = (uint32_t *)flash_buffer;
   uint32_t *flash_buf = (uint32_t *)flash_addr;
   NVMCTRL->ADDR.reg = flash_addr >> 1;
 
@@ -169,8 +170,8 @@ static void flash_task(void)
   }
 
   // Reprogram memory
-  for (int i = 0; i < DATA_SIZE_WORDS; i++)
-    flash_buf[i] = flash_buffer[i];
+  for (int i = 0; i < DATA_SIZE / 4; i++)
+    flash_buf[i] = ram_buf[i];
 
   while (!NVMCTRL->INTFLAG.bit.READY);
 
@@ -183,7 +184,7 @@ static void flash_task(void)
   while (!(DSU->STATUSA.reg & DSU_STATUSA_DONE));
 
 
-  if (!(DSU->STATUSA.reg & DSU_STATUSA_BERR) && flash_crc == DSU->DATA.reg) {
+  if (!(DSU->STATUSA.reg & DSU_STATUSA_BERR) && ~flash_crc == DSU->DATA.reg) {
     uart_putc(BL_CMD_ACK);
   } else {
     uart_putc(BL_CMD_NACK);
