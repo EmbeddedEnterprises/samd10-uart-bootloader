@@ -8,12 +8,12 @@ The bootloader is designed to allow easy in-system updates for SAMD10C/D MCUs.
 ## Usage
 
 Using this bootloader is simple:
-- Create your firmware, link it with the bootloader-variant of the linker script. (can be found [here](tbd))
+- Create your firmware, link it with the bootloader-variant of the linker script. (can be found [here](https://github.com/EmbeddedEnterprises/samd10-uart-bootloader/blob/master/linker/samd10x14-bootloader.ld))
 - Upload the bootloader to your device using SWD.
 - When the bootloader detects that no firmware is programmed, it will wait for a firmware to be uploaded.
 - Upload your firmware using the `upload.py` tool.
 
-**Note that your user-firmware has to include a function to enter the bootloader, one is provided [here](tbd)**
+**Note that your user-firmware has to include a function to enter the bootloader, one is provided [here](https://github.com/EmbeddedEnterprises/samd10-uart-bootloader/blob/master/example/reboot.c)**
 
 Hints:
 - The bootloader requires 16 bytes of memory at the beginning of the memory address space.
