@@ -1,4 +1,11 @@
-//-----------------------------------------------------------------------------
+/* main.c - The bootloader source.
+ *
+ * Copyright (C) 2018 EmbeddedEnterprises
+ * Martin Koppehel <martin.koppehel@st.ovgu.de>
+ *
+ * This software may be modified and distributed under the terms
+ * of the MIT license.  See the LICENSE file for details.
+ */
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
